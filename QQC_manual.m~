@@ -45,11 +45,8 @@ system(sprintf('/usr/local/bin/convert_trace -out_format scf < %s > temp.scf', f
 % scheme_pred=[ones(1, 4)./4; [1/3 1/3 1/3 0]; [0 1 0 0]];
 % scheme='22C'; % see dx.doi.org/10.1038/srep10654
 % scheme_pred=[[0.27 0.19 0.27 0.27]; [0.32 0.32 0.18 0.18]; [0 0.55 0.45 0]];
-% scheme='20C'; % see dx.doi.org/10.1038/srep10654 aka. Tang
+% scheme='19C'; % see dx.doi.org/10.1038/srep10654
 % scheme_pred=[[0.30 0.20 0.25 0.25]; [0.35 0.25 0.20 0.20]; [0.30 0.60 0.10 0]];
-% scheme='19C'; % Ask Carlos for reference.
-% scheme_pred=[[0.263 0.263 0.211 0.263]; [0.368 0.263 0.211 0.158]; [0.368 0.053 0.105 0.474]];
-
 
 %% Find mutation
 % Roughly were the mutation is:
@@ -138,6 +135,7 @@ x=zeros(4,3);
 for j=1:4
     % this is riduculous. Pie chart does not obey ColorOrder. That just
     % shows how old and disused it is.
+
     x(j,:)=chroma(j).Color;
 end
 colormap(x)

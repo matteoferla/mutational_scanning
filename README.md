@@ -18,7 +18,7 @@ As Matlab cannot open ab1 files, they need to be converted. For this Staden tool
 * do as they say `$ ./configure` then `$ make` then `$ make install`
 ### scfread
 Matlab can read the non-propriety scf thanks to the function `scfread`. Which is documented [here](https://uk.mathworks.com/help/bioinfo/ref/scfread.html).    
-Confusingly, flow citometry files are `fsc` files, which have nothing to do with this, and to further the confusion the function from Exchange `fca_readfsc` to read them has the words arranged backwards. So if fsc files sound familiar it because of that probably.    
+Confusingly, flow citometry files are `fsc` files, which have nothing to do with this, and to further the confusion the function from [Exchange `fca_readfsc`](http://uk.mathworks.com/matlabcentral/fileexchange/9608-fcs-data-reader) to read them has the words arranged backwards. So if fsc files sound familiar it because of that probably.    
 As explained in the manual, two files are returned with the call:   
 `[Sample, Probability] = scfread(fullfile(pathname,'temp.scf'));`    
 `Sample` contains all the fluorescent channels data, while `Probability` has the elaborated versions.

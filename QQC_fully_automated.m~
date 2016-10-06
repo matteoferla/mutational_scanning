@@ -19,7 +19,7 @@
 
 %% Analysis presets
 % Roughly were the mutation is:
-zone = 360:390;
+zone = 370:390;
 % The range is because the initial few bases may or may not be called and
 % never come out consistent.
 % It may be better giving a sequence to find in front or something, as everyone has a
@@ -64,7 +64,7 @@ for f = files(abfilelogi > 0)
         scheme_pred=[[0.30 0.20 0.25 0.25]; [0.35 0.25 0.20 0.20]; [0.30 0.60 0.10 0]];
     elseif ~isempty(strfind(f{1},'19C'))
         scheme='19C'; % Ask Carlos for reference.
-        scheme_pred=[[0.263 0.263 0.211 0.263]; [0.368 0.263 0.211 0.158]; [0.368 0.053 0.105 0.474]];
+        scheme_pred=[[0.263 0.263 0.211 0.263]; [0.368 0.25 0.20 0.20]; [0.30 0.60 0.10 0]];
     else
         error('Cannot recognise scheme from filename')
     end
@@ -82,7 +82,7 @@ for f = files(abfilelogi > 0)
     % find all the bases in the given range that are less than 0.9 pure.
     interpeak = mean(Probability.peak_index(2:end) - Probability.peak_index(1:end-1));
     noisy=max([Sample.A(Probability.peak_index(zone)),Sample.T(Probability.peak_index(zone)), Sample.C(Probability.peak_index(zone)), Sample.G(Probability.peak_index(zone))]')./sum([Sample.A(Probability.peak_index(zone)),Sample.T(Probability.peak_index(zone)), Sample.C(Probability.peak_index(zone)), Sample.G(Probability.peak_index(zone))]');
-    ni=find(noisy<0.95);
+    ni=find(noisy<0.9);
     % crash if they are not 3 consecutive bases --an issue if NDT.
     if (numel(ni) ~= 3) || (max(ni)-min(ni) ~= 2)
         error('Noisy values not sequential')
