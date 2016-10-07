@@ -90,15 +90,14 @@ for f = files(abfilelogi > 0)
     m=zeros(3,4);
     ii=0;
     %%% Measure
-    % loop per base, but in the chromatogram time axis.
-    for i=(-1:1)*interpeak
+    % loop per base, but convert to the chromatogram time axis (pa:pb).
+    for i=1:3
         % base rough boundary. Fitting to gaussian may be better, but a
         % whole can of worms, due to bell curves merging.
-        pa=Probability.peak_index(zone(1)+ni(1))+i;
-        pb=Probability.peak_index(zone(1)+ni(1))+i+interpeak;
-        ii=ii+1;
+        pa=Probability.peak_index(zone(1)+ni(i)-1)-floor(interpeak/2);
+        pb=Probability.peak_index(zone(1)+ni(i)-1)+ceil(interpeak/2);
         % RFU of the peak top
-        m(ii,1:4)=max([Sample.A(pa:pb), Sample.T(pa:pb), Sample.G(pa:pb), Sample.C(pa:pb)]);
+        m(i,1:4)=max([Sample.A(pa:pb), Sample.T(pa:pb), Sample.G(pa:pb), Sample.C(pa:pb)]);
     end
     %%% Analyse
     % make fraction of 1.

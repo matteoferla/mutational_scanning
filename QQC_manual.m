@@ -63,6 +63,19 @@ zone = mutation-4:mutation+4;
 
 
 %% Plot sequence zome.
+% Abi traces are normally with this scheme.
+% A in g
+% T in r
+% G in k
+% C in b
+% harsh primaries:
+chromamap=[0 1 0; 1 0 0; 1 1 1; 0 0 1];
+% Matlab default ColorOrder copied softer colors:
+chromamap=[0.4660 0.6740 0.1880;
+    0.8500    0.3250    0.0980;
+    0.3250    0.3250    0.3250;
+    0         0.4470    0.7410];
+set(groot,'defaultAxesColorOrder',chromamap)
 figure;
 pa=Probability.peak_index(zone(1));
 pb=Probability.peak_index(zone(end));
@@ -83,17 +96,15 @@ if (numel(ni) ~= 3) || (max(ni)-min(ni) ~= 2)
     error('Noisy values not sequential')
 end
 m=zeros(3,4);
-ii=0;
 %% Measure
-% loop per base, but in the chromatogram time axis.
-for i=(-1:1)*interpeak
+% loop per base, but convert to the chromatogram time axis (pa:pb).
+for i=1:3
     % base rough boundary. Fitting to gaussian may be better, but a
     % whole can of worms, due to bell curves merging.
-    pa=Probability.peak_index(zone(1)+ni(1))+i;
-    pb=Probability.peak_index(zone(1)+ni(1))+i+interpeak;
-    ii=ii+1;
+    pa=Probability.peak_index(zone(1)+ni(i)-1)-floor(interpeak/2);
+    pb=Probability.peak_index(zone(1)+ni(i)-1)+ceil(interpeak/2);
     % RFU of the peak top
-    m(ii,1:4)=max([Sample.A(pa:pb), Sample.T(pa:pb), Sample.G(pa:pb), Sample.C(pa:pb)]);
+    m(i,1:4)=max([Sample.A(pa:pb), Sample.T(pa:pb), Sample.G(pa:pb), Sample.C(pa:pb)]);
 end
 %% Analyse
 % make fraction of 1.
@@ -124,23 +135,18 @@ display(array2table([m2, deviation,repmat(Qpool,3,1)],...
 
 %% pie time
 clean_m2=m2;
-clean_m2(clean_m2<=0)=0.001;
+clean_m2(clean_m2<=0)=0.0001;
 figure;
+set(groot,'defaultAxesColorOrder',chromamap)
 for i=1:3
 subplot(2,3,i)
 pa=Probability.peak_index(zone(1)+ni(i)-1)-floor(interpeak/2);
 pb=Probability.peak_index(zone(1)+ni(i)-1)+ceil(interpeak/2);
-chroma=plot([Sample.A(pa:pb), Sample.T(pa:pb), Sample.C(pa:pb), Sample.G(pa:pb)]);
+chroma=plot([Sample.A(pa:pb), Sample.T(pa:pb), Sample.G(pa:pb), Sample.C(pa:pb)]);
 subplot(2,3,i+3)
 % The codons were per row to make humans unaccostomed to matlab happy...
 slices=pie(clean_m2(i,:),{'A','T','G','C'});
-x=zeros(4,3);
-for j=1:4
-    % this is riduculous. Pie chart does not obey ColorOrder. That just
-    % shows how old and disused it is.
-    x(j,:)=chroma(j).Color;
-end
-colormap(x)
+colormap(chromamap)
 end
 
 
