@@ -26,6 +26,16 @@ zone = 360:390;
 % different need, drop matteo.ferla@gmail.com an email and he will change
 % it for your need.
 
+bases={'A','T','G','C'};
+% cellfun(@strcat,bases',bases) gives an error.
+codnames=cell(4,4,4);
+for i=1:4
+    for j=1:4
+     codnames(i,j,:)=strcat(bases{i},bases{j},bases);
+    end
+end
+aanames=aminolookup(nt2aa(codnames(:)));
+
 %% Script
 %%% Parse
 % Navigate to the right folder and that the folder free of unicode symbols
@@ -34,7 +44,7 @@ files = {d.name}; %names of all the files.
 abfilelogi = cellfun(@sum, strfind(files, '.ab1')); %fudgelogical of ab1
 fi=0;  % index.
 % initiate blank table
-Tmain  = cell2table(cell(0,7), 'VariableNames', {'A','T','G','C','sumDev','Qpool','scheme'});
+Tmain  = cell2table(cell(0,28), 'VariableNames', [{'A','T','G','C','sumDev','Qpool','scheme'} sort(categories(categorical(aanames)))']);
 % loop through
 for f = files(abfilelogi > 0)
     display(f);
@@ -53,10 +63,10 @@ for f = files(abfilelogi > 0)
     elseif ~isempty(strfind(f{1},'NNS'))
         scheme='NNS'; % S is strong, G or C. 
         scheme_pred=[ones(2, 4)./4; [0 0 0.5 0.5]];
-    elseif ~isempty(strfind(f{1},'NDT'))
-        scheme='NDT'; % D is not C. 
-        scheme_pred=[ones(1, 4)./4; [1/3 1/3 1/3 0]; [0 1 0 0]];
-    elseif ~isempty(strfind(f{1},'22C'))
+    %elseif ~isempty(strfind(f{1},'NDT'))
+    %    scheme='NDT'; % D is not C. 
+    %    scheme_pred=[ones(1, 4)./4; [1/3 1/3 1/3 0]; [0 1 0 0]];
+    elseif or(~isempty(strfind(f{1},'22C')), ~isempty(strfind(f{1},'VHG')))
         scheme='22C'; % see dx.doi.org/10.1038/srep10654
         scheme_pred=[[0.27 0.19 0.27 0.27]; [0.32 0.32 0.18 0.18]; [0 0.55 0.45 0]];
     elseif ~isempty(strfind(f{1},'20C'))  % Tang
@@ -109,9 +119,20 @@ for f = files(abfilelogi > 0)
     worse=sum(scheme_pred-abs(scheme_pred-[ones(3,1), zeros(3,3)]),2);
     wmin=sum(worse.*weights);
     Qpool=(wsum+abs(wmin))/(1+abs(wmin));
+    %% AA composition
+    % zeros 8ball through the data.
+    codon=m2;
+    codon(codon<=0)=0.0001;
+    % tensor product
+    codprob=bsxfun(@mtimes, codon(1,:)'*codon(2,:), reshape(codon(3,:),1,1,4));
+    codtable=[array2table(codprob(:),'RowNames',codnames(:),'VariableNames', {'Prob'}), cell2table(aanames,'RowNames',codnames(:),'VariableNames', {'AA'})];
+    aaprob=grpstats(codtable,'AA',@sum);    
     %%% Store
     % "add" to the table Tmain.
-    Tmain = [Tmain; [array2table([m2, deviation,repmat(Qpool,3,1)], 'VariableNames', {'A','T','G','C','sumDev','Qpool'},'RowNames',cellstr(strcat(f{1},' N',int2str(zone(1)+ni')))),cell2table(cellstr(repmat(scheme,3,1)),'VariableNames',{'scheme'})]];
+    Tmain = [Tmain;...
+        [array2table([m2, deviation,repmat(Qpool,3,1)], 'VariableNames', [{'A','T','G','C','sumDev','Qpool'}],'RowNames',cellstr(strcat(f{1},' N',int2str(zone(1)+ni')))),...
+        cell2table(cellstr(repmat(scheme,3,1)),'VariableNames',{'scheme'}),...
+        array2table(repmat(aaprob.sum_Prob',3,1),'VariableNames',aaprob.AA)]];
 end
 %%% Output
 display(Tmain)

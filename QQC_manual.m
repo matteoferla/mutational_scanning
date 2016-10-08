@@ -29,9 +29,13 @@
 % following fails...
 % system(sprintf('convert_trace -out_format scf < %s > temp.scf',f{1}));
 % this works
-system(sprintf('/usr/local/bin/convert_trace -out_format scf < %s > temp.scf', fullfile(pathname,file)));
+system(sprintf('/usr/local/bin/convert_trace -out_format scf < "%s" > temp_via_matlab.scf', fullfile(pathname,file)));
 % although do change your Matlab's list of path if you haven't.
-[Sample, Probability] = scfread(fullfile(pathname,'temp.scf'));
+[Sample, Probability] = scfread(fullfile(pathname,'temp_via_matlab.scf'));
+
+%% Unicode in path or something as bad?
+% Change Current folder...
+[Sample, Probability] = scfread(fullfile('temp.scf'));
 
 %% Scheme
 % what scheme is used? % uncomment the appropriate...
@@ -101,8 +105,8 @@ m=zeros(3,4);
 for i=1:3
     % base rough boundary. Fitting to gaussian may be better, but a
     % whole can of worms, due to bell curves merging.
-    pa=Probability.peak_index(zone(1)+ni(i)-1)-floor(interpeak/2);
-    pb=Probability.peak_index(zone(1)+ni(i)-1)+ceil(interpeak/2);
+    pa=Probability.peak_index(zone(1)+ni(i)-1)-floor(interpeak/2*0.70);
+    pb=Probability.peak_index(zone(1)+ni(i)-1)+ceil(interpeak/2*0.70);
     % RFU of the peak top
     m(i,1:4)=max([Sample.A(pa:pb), Sample.T(pa:pb), Sample.G(pa:pb), Sample.C(pa:pb)]);
 end
@@ -134,8 +138,8 @@ display(array2table([m2, deviation,repmat(Qpool,3,1)],...
     
 
 %% pie time
-clean_m2=m2;
-clean_m2(clean_m2<=0)=0.0001;
+codon=m2;
+codon(codon<=0)=0.0001;
 figure;
 set(groot,'defaultAxesColorOrder',chromamap)
 for i=1:3
@@ -143,11 +147,63 @@ subplot(2,3,i)
 pa=Probability.peak_index(zone(1)+ni(i)-1)-floor(interpeak/2);
 pb=Probability.peak_index(zone(1)+ni(i)-1)+ceil(interpeak/2);
 chroma=plot([Sample.A(pa:pb), Sample.T(pa:pb), Sample.G(pa:pb), Sample.C(pa:pb)]);
+g=gca;
+w=floor(interpeak/2)+ceil(interpeak/2);
+line([w/2*0.3+1 w/2*0.3+1],g.YLim,'Color','k');
+line([w/2*1.7+1 w/2*1.7+1],g.YLim,'Color','k');
 subplot(2,3,i+3)
 % The codons were per row to make humans unaccostomed to matlab happy...
-slices=pie(clean_m2(i,:),{'A','T','G','C'});
+slices=pie(codon(i,:),{'A','T','G','C'});
 colormap(chromamap)
 end
+suptitle(sprintf('Qpool= %0.2f for scheme %s',Qpool,scheme))
+
+%% Disentangle mixed codons
+% Some schemes, use mixes of codons.
+% 22c is NDT?+?9 eq. VHG?+?1 eq. TGG
+% Tang is 12 eq. NDT?+?6 eq. VHA?+?1 eq. TGG?+?1 eq. ATG
+% There are two ways. Solve the equation or just Suduku it.
+% Fitting the equation would be better but requires writing the matrices.
+
+% TBD
+
+
+
+%% AA composition
+bases={'A','T','G','C'};
+% cellfun(@strcat,bases',bases) gives an error.
+codnames=cell(4,4,4);
+for i=1:4
+    for j=1:4
+     codnames(i,j,:)=strcat(bases{i},bases{j},bases);
+    end
+end
+
+% tensor product
+codprob=bsxfun(@mtimes, codon(1,:)'*codon(2,:), reshape(codon(3,:),1,1,4));
+% proof of no errors.
+% sum(codprob(:)) is one.
+% codnames(find(codprob==max(codprob(:)))) is the best according to
+% figure 2.
+codtable=[array2table(codprob(:),'RowNames',codnames(:),'VariableNames', {'Prob'}), cell2table(nt2aa(codnames(:)),'RowNames',codnames(:),'VariableNames', {'AA'})];
+aaprob=grpstats(codtable,'AA',@sum);
+saaprob=sortrows(aaprob,'AA');
+display(aaprob)
+
+%ref
+codpred=bsxfun(@mtimes, scheme_pred(1,:)'*scheme_pred(2,:), reshape(scheme_pred(3,:),1,1,4));
+predtable=[array2table(codpred(:),'RowNames',codnames(:),'VariableNames', {'Prob'}), cell2table(nt2aa(codnames(:)),'RowNames',codnames(:),'VariableNames', {'AA'})];
+aapred=grpstats(predtable,'AA',@sum);
+saapred=sortrows(aapred,'AA');
+
+figure;
+bar([saaprob.sum_Prob, saapred.sum_Prob])
+ax=gca;
+ax.XTick=1:21;
+ax.XTickLabel=saaprob.AA;
+ax.XTickLabelRotation=45;
+title(file)
+legend({'Experimental','Expected'})
 
 
 
