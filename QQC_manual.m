@@ -31,7 +31,7 @@
 % this works
 system(sprintf('/usr/local/bin/convert_trace -out_format scf < "%s" > temp_via_matlab.scf', fullfile(pathname,file)));
 % although do change your Matlab's list of path if you haven't.
-[Sample, Probability] = scfread(fullfile(pathname,'temp_via_matlab.scf'));
+[Sample, Probability] = scfread('temp_via_matlab.scf');
 
 %% Unicode in path or something as bad?
 % Change Current folder...
@@ -158,16 +158,6 @@ colormap(chromamap)
 end
 suptitle(sprintf('Qpool= %0.2f for scheme %s',Qpool,scheme))
 
-%% Disentangle mixed codons
-% Some schemes, use mixes of codons.
-% 22c is NDT?+?9 eq. VHG?+?1 eq. TGG
-% Tang is 12 eq. NDT?+?6 eq. VHA?+?1 eq. TGG?+?1 eq. ATG
-% There are two ways. Solve the equation or just Suduku it.
-% Fitting the equation would be better but requires writing the matrices.
-
-% TBD
-
-
 
 %% AA composition
 bases={'A','T','G','C'};
@@ -204,6 +194,82 @@ ax.XTickLabel=saaprob.AA;
 ax.XTickLabelRotation=45;
 title(file)
 legend({'Experimental','Expected'})
+
+
+%% Disentangle mixed codons
+% This section is experimental.
+
+% Some schemes, use mixes of codons.
+% 22c is NDT?+?9 eq. VHG?+?1 eq. TGG
+% Tang is 12 eq. NDT?+?6 eq. VHA?+?1 eq. TGG?+?1 eq. ATG
+% There are two ways. Solve the equation or just Suduku it.
+% Fitting the equation would be better but requires writing the matrices.
+
+% Tang
+NDT = [ones(1, 4)./4; [1/3 1/3 1/3 0]; [0 1 0 0]];
+VHA = [1/3 0 1/3 1/3; 1/3 1/3 0 1/3; 1 0 0 0];
+TGG = [0 1 0 0; 0 0 1 0; 0 0 1 0];
+ATG  = [1 0 0 0; 0 1 0 0; 0 0 1 0];
+con = cat(3, NDT, VHA, TGG, ATG);
+pro = [12 6 1 1];
+
+% 22c
+VHG = [1/3 0 1/3 1/3; 1/3 1/3 0 1/3; 0 0 1 0];
+con = cat(3, NDT, VHG, TGG);
+pro = [1 9 1];
+
+ppro = squeeze(pro ./sum(pro));
+
+objfunc = @(offness) sum(abs(reshape(abs(offness(:,:,1) .* ppro(1) .* con(:,:,1)) + abs(offness(:,:,2) .* ppro(2) .* con(:,:,2)) + abs(offness(:,:,3) .* ppro(3) .* con(:,:,3)) - codon, 12,1)));
+% ideally a weight would be good to balance the two.
+[offness,fval] = fminsearch(objfunc,ones(3,4,numel(ppro)),optimset('MaxFunEvals',5e4));
+offness=abs(offness);
+pcodon=abs(offness(:,:,1) .* ppro(1) .* con(:,:,1)) + abs(offness(:,:,2) .* ppro(2) .* con(:,:,2)) + abs(offness(:,:,3) .* ppro(3) .* con(:,:,3));
+
+figure;
+image(cat(3,pcodon,codon,zeros(3,4)))
+ax=gca;
+ax.XTick = 1:4;
+ax.XTickLabel = bases;
+ax.YTick = 1:3;
+ax.YTickLabel = {'Pos1','Pos2','Pos3'};
+title({'redness=predicted by model', 'greenness=actual'})
+
+% tensor product
+codprob=zeros(4,4,4);
+codpred=zeros(4,4,4);
+
+
+for i=1:numel(ppro)
+    dcodon=con(:,:,i);
+    tcodon=offness(:,:,i) .* dcodon;
+    codprob=codprob+ppro(i)*bsxfun(@mtimes, tcodon(1,:)'*tcodon(2,:), reshape(tcodon(3,:),1,1,4));
+    codpred=codpred+ppro(i)*bsxfun(@mtimes, dcodon(1,:)'*dcodon(2,:), reshape(dcodon(3,:),1,1,4));
+end
+% proof of no errors.
+% sum(codprob(:)) is one. it is 0.32
+% codnames(find(codprob==max(codprob(:)))) is the best according to
+% figure 2.
+codtable=[array2table(codprob(:),'RowNames',codnames(:),'VariableNames', {'Prob'}), cell2table(nt2aa(codnames(:)),'RowNames',codnames(:),'VariableNames', {'AA'})];
+aaprob=grpstats(codtable,'AA',@sum);
+saaprob=sortrows(aaprob,'AA');
+display(aaprob)
+
+%ref
+predtable=[array2table(codpred(:),'RowNames',codnames(:),'VariableNames', {'Prob'}), cell2table(nt2aa(codnames(:)),'RowNames',codnames(:),'VariableNames', {'AA'})];
+aapred=grpstats(predtable,'AA',@sum);
+saapred=sortrows(aapred,'AA');
+
+figure;
+bar([saaprob.sum_Prob, saapred.sum_Prob])
+ax=gca;
+ax.XTick=1:21;
+ax.XTickLabel=saaprob.AA;
+ax.XTickLabelRotation=45;
+title(file)
+legend({'Experimental','Expected'})
+
+
 
 
 
