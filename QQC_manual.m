@@ -88,6 +88,7 @@ text(Probability.peak_index(zone)-Probability.peak_index(zone(1)),ones(numel(zon
 xlabel('Arbitrary chromatogram time')
 ylabel('RFU')
 legend({'A','T','G','C'})
+title('Chromatogram of mutated codon')
 
 %% get range
 % find all the bases in the given range that are less than 0.9 pure.
@@ -169,6 +170,8 @@ for i=1:4
     end
 end
 
+% if using a mix primer method, see next section
+
 % tensor product
 codprob=bsxfun(@mtimes, codon(1,:)'*codon(2,:), reshape(codon(3,:),1,1,4));
 % proof of no errors.
@@ -194,6 +197,11 @@ ax.XTickLabel=saaprob.AA;
 ax.XTickLabelRotation=45;
 title(file)
 legend({'Experimental','Expected'})
+
+
+%% Nested pie charts
+% Make nested pie charts like in figure 3.
+
 
 
 %% Disentangle mixed codons
@@ -260,13 +268,26 @@ predtable=[array2table(codpred(:),'RowNames',codnames(:),'VariableNames', {'Prob
 aapred=grpstats(predtable,'AA',@sum);
 saapred=sortrows(aapred,'AA');
 
+
+% plot of aa
 figure;
 bar([saaprob.sum_Prob, saapred.sum_Prob])
 ax=gca;
 ax.XTick=1:21;
 ax.XTickLabel=saaprob.AA;
 ax.XTickLabelRotation=45;
-title(file)
+title({'predicted amino acid distribution for ',sprintf('using scheme %s', scheme), file})
+legend({'Experimental','Expected'})
+
+figure;
+bar(saaprob.sum_Prob)
+hold on
+plot(saapred.sum_Prob)
+ax=gca;
+ax.XTick=1:21;
+ax.XTickLabel=saaprob.AA;
+ax.XTickLabelRotation=45;
+title({'predicted amino acid distribution for ',sprintf('using scheme %s', scheme), file})
 legend({'Experimental','Expected'})
 
 

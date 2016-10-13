@@ -44,7 +44,15 @@ colore=reshape(data(81:end),80,3);
 % scale min = 0 max = 1
 scolore = (colore - repmat(min(colore), 80, 1)) ./ (repmat(max(colore), 80, 1) - repmat(min(colore), 80, 1));
 % gamma correction mu=0.5    x_gcorr=x^gamma
-gammas=log(0.5)./log(mean(scolore));
+%{
+<latex>
+\begin{equation} 
+\boldsymbol{\xi}=\left( \frac{\boldsymbol{x}-min(\boldsymbol{x})}{max(\boldsymbol{x})-min(\boldsymbol{x})}\right)^\gamma
+\textrm{ where }\gamma=\frac{log(0.5)}{log(median(\boldsymbol{x}))}
+\end{equation}
+</latex>
+%}
+gammas=log(0.5)./log(median(scolore));
 gcolore=scolore.^repmat(gammas, 80,1);
 
 %% Scatter plot
@@ -82,6 +90,42 @@ axis off
 text(1:4, ones(4,1)/3,{'25%','50%','75%','100%'})
 text(-2, 1, 'activity rel. to wt')
 
+
+
+%% Heatmap
+
+figure
+K = 1 - reshape(fdata(1:80),20,4)';  % blackness, not whiteness is activity
+R = reshape(gcolore(1:80),20,4)';
+G = reshape(gcolore(81:160),20,4)';
+B = reshape(gcolore(161:240),20,4)';
+colore2 = [cat(3, K, K, K); cat(3, R, G, B)];
+image(colore2);
+ax = gca;
+ax.YTick = 1:8;
+ax.YTickLabel = reshape(repmat(colname, 1, 2), 8, 1);
+ax.XTick = 1:numel(rowname);
+ax.XTickLabel = rowname;
+title({'Heatmap with black for conversion, red for 2-selectivity','green for 4-selectivity and blue for 3-selectivity'})
+
+%% Rank
+% this is a bad idea. Here for illustration why.
+figure
+[Ks, Ki]=sort(data(1:80));
+K = reshape(Ki,4,20);
+[Rs, Ri]=sort(data(81:160));
+R = reshape(Ri,4,20);
+[Gs, Gi]=sort(data(161:240));
+G = reshape(Gi,4,20);
+[Bs, Bi]=sort(data(241:320));
+B = reshape(Bi,4,20);
+colore2 = [cat(3, K, K, K)./80; cat(3, R, G, B)./80];
+image(colore2);
+ax = gca;
+ax.YTick = 1:8;
+ax.YTickLabel = reshape(repmat(colname, 1, 2), 8, 1);
+ax.XTick = 1:numel(rowname);
+ax.XTickLabel = rowname;
 
 %% Ternary plot
 % Version 1. With dots scaled to activity
@@ -139,38 +183,3 @@ text(txtx,txty,muts);
 c=colorbar;
 c.Label.String = '% Activity relative to wild type';
 
-
-%% Heatmap
-
-figure
-K = reshape(fdata(1:80),20,4)';
-R = reshape(gcolore(1:80),20,4)';
-G = reshape(gcolore(81:160),20,4)';
-B = reshape(gcolore(161:240),20,4)';
-colore2 = [cat(3, K, K, K); cat(3, R, G, B)];
-image(colore2);
-ax = gca;
-ax.YTick = 1:8;
-ax.YTickLabel = reshape(repmat(colname, 1, 2), 8, 1);
-ax.XTick = 1:numel(rowname);
-ax.XTickLabel = rowname;
-title({'Heatmap with','black for conversion','red for 2-selectivity','green for 4-selectivity','blue for 3-selectivity'})
-
-%% Rank
-% this is a bad idea.
-figure
-[Ks, Ki]=sort(data(1:80));
-K = reshape(Ki,4,20);
-[Rs, Ri]=sort(data(81:160));
-R = reshape(Ri,4,20);
-[Gs, Gi]=sort(data(161:240));
-G = reshape(Gi,4,20);
-[Bs, Bi]=sort(data(241:320));
-B = reshape(Bi,4,20);
-colore2 = [cat(3, K, K, K)./80; cat(3, R, G, B)./80];
-image(colore2);
-ax = gca;
-ax.YTick = 1:8;
-ax.YTickLabel = reshape(repmat(colname, 1, 2), 8, 1);
-ax.XTick = 1:numel(rowname);
-ax.XTickLabel = rowname;
