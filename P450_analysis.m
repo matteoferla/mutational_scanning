@@ -106,7 +106,7 @@ ax.YTick = 1:8;
 ax.YTickLabel = reshape(repmat(colname, 1, 2), 8, 1);
 ax.XTick = 1:numel(rowname);
 ax.XTickLabel = rowname;
-title({'Heatmap with black for conversion, red for 2-selectivity','green for 4-selectivity and blue for 3-selectivity'})
+title({'Heatmap with black for conversion, red for 2-selectivity','green for 15-selectivity and blue for 16-selectivity'})
 
 %% Rank
 % this is a bad idea. Here for illustration why.
@@ -183,3 +183,59 @@ text(txtx,txty,muts);
 c=colorbar;
 c.Label.String = '% Activity relative to wild type';
 
+%% bar chart
+rdata=reshape(data(:, :, 1:4), 80, 4);
+figure;
+subplot(2,1,2)
+% more clear tahn doing reshapes.
+labels=cell(20,4);
+for i=1:numel(colname)
+    labels(:,i)=strcat(colname(i),rowname);
+end
+[H,T,outperm] = dendrogram(linkage(pdist(rdata)), 'labels', labels(:),'Orientation','bottom');
+%title('mutations linked based on average distance of all four variables')
+ax=gca;
+ax.XTickLabelRotation=45;
+ax.YTickLabel='';
+ax.YTick=[];
+nlabels=cell(30,1);
+n2labels=cell(10,1);
+olabels=cell(30,1);
+cdata=zeros(30,4);
+for i=1:30
+    o=outperm(i);
+    cdata(i,:)=mean(rdata(T==o,:));
+    olabels(i)={labels(T==o)};
+end
+i=0;
+n=0;
+for o=olabels'
+    i=1+i;
+    if numel(o{1})>1
+        n=n+1;
+        nlabels{i}=strcat('#',num2str(n));
+        n2labels(n)=o;
+        display(strcat('#',num2str(n)))
+        display(o{1})
+    else
+        nlabels(i)=o{1};
+    end
+end
+ax.XTickLabel=nlabels;
+subplot(2,1,1)
+b=bar(cdata(:,2:4).*repmat(cdata(:,1),1,3)./1e2,'stacked');
+% less harsh colors copied from ColorOrder
+b(1).FaceColor=[0.8500    0.3250    0.0980];
+b(2).FaceColor=[0.4660    0.6740    0.1880];
+b(3).FaceColor=[0    0.4470    0.7410];
+xlim([0, 31])
+ax=gca;
+ax.XTickLabel='';
+%legend(stackname)
+legend({'2-beta-hydroxytestosterone','15-beta-hydroxytestosterone','16-beta-hydroxytestosterone'})
+ylabel('% activity relative to wild type')
+title('Activities of variants')
+
+
+
+    
