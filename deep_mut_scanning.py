@@ -154,4 +154,13 @@ def test():
     w.writerows(deep_mutation_scan(query, (n, n + m)))
 
 if __name__ == "__main__":
-    test()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("infile", help="the fasta file with the sequence")
+    parser.add_argument("outfile", help="the csv file to save the data into")
+    parser.add_argument("section_start", type=int, help="the start of the mutagenised region")
+    parser.add_argument("section_end", type=int, help="the end of the mutagenised region")
+    #parser.add_argument("-T", "--target_temp", type=int, nargs = 1, dest = "target_temp", help="Target temperature")
+    args = parser.parse_args()
+    seq=''.join(open(args.infile).read().split('\n')[1:]) #crude fasta reading...
+    deep_mutation_scan(seq, (args.section_start, args.section_stop))
