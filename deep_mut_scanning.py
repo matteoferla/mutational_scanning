@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 # Written for python 3, not tested under 2.
 """
-    Deep mutational scan primer design for Carlos Acevedo-Rocha based on this paper: http://nar.oxfordjournals.org/content/43/2/e12.long
-    """
+Deep mutational scan primer design for Carlos Acevedo-Rocha based on this paper: http://nar.oxfordjournals.org/content/43/2/e12.long
+"""
 __author__ = "Matteo Ferla. [Github](https://github.com/matteoferla)"
 __email__ = "matteo.ferla@gmail.com"
 __date__ = ""
@@ -134,10 +134,10 @@ def deep_mutation_scan(region, section, target_temp=55, overlap_len=22, primer_r
 
 def randomer(n):
     """
-        Generate random DNA (not a randomer (NNNNN) which is a mix of random DNA)
-        :param n: length
-        :return: string
-        """
+    Generate random DNA (not a randomer (NNNNN) which is a mix of random DNA)
+    :param n: length
+    :return: string
+    """
     alphabet=['A','T','G','C']
     return ''.join([random.choice(alphabet) for x in range(n)])
 
@@ -150,8 +150,8 @@ def test():
     import csv
     w = csv.DictWriter(open('out.csv', 'w', newline=''),
                        fieldnames='base AA codon fw_primer rv_primer len_homology fw_len_anneal rv_len_anneal fw_len_primer rv_len_primer homology_start homology_stop homology_Tm fw_anneal_Tm rv_anneal_Tm'.split())
-                       w.writeheader()
-                       w.writerows(deep_mutation_scan(query, (n, n + m)))
+    w.writeheader()
+    w.writerows(deep_mutation_scan(query, (n, n + m)))
 
 if __name__ == "__main__":
     test()
