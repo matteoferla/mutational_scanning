@@ -35,7 +35,14 @@ class Trace:
         return cls(record)
 
     def find_peak(self, target_seq, strict=True):
+        '''
+        Find the index of the first base of a given sequence in the trace.
+        :param target_seq: a string of bases.
+        :param strict: boolean, dies if multiple hits.
+        :return:
+        '''
         ## sanitise
+        target_seq = re.sub('[^ATGC]','', target_seq.upper())
         targetdex = re.findall(target_seq, self.peak_id)
         if not targetdex:
             raise ValueError('target_seq not found!')
@@ -44,8 +51,8 @@ class Trace:
                 raise ValueError('Ambiguous sequence given!')
             else:
                 warn('Ambiguous sequence given!')
-        i = self.peak_id.find(target_seq) + len(target_seq)
-        ## analyse
+        return self.peak_id.find(target_seq)
+
 
 
 if __name__ == "__main__":
@@ -56,4 +63,10 @@ if __name__ == "__main__":
 
     file = "example data/ACE-AA-088-01-55Â°C-BM3-A82_19C-T7-T7minus1.ab1"
     x = Trace.from_filename(file)
-    x.find_peak('ACGTGATTTT')
+    print(x.find_peak('CGT GAT TTT'))
+    # To Do...
+    # get base frequency at given peak
+    # QQC class
+    # given input CGT GAT TTT NNK
+    # calculate ratios
+    #
