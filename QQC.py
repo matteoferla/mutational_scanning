@@ -16,6 +16,8 @@ from warnings import warn
 
 
 class Trace:
+    bases = ('A', 'T', 'G', 'C')
+
     def __init__(self, record):
         for ni, N in enumerate(record.annotations['abif_raw']['FWO_1'].upper()):
             setattr(self, N, record.annotations['abif_raw']['DATA{0}'.format(9 + ni)])
@@ -39,10 +41,10 @@ class Trace:
         Find the index of the first base of a given sequence in the trace.
         :param target_seq: a string of bases.
         :param strict: boolean, dies if multiple hits.
-        :return:
+        :return: the index of peak_id or peak_index of the first base.
         '''
         ## sanitise
-        target_seq = re.sub('[^ATGC]','', target_seq.upper())
+        target_seq = re.sub('[^ATGC]', '', target_seq.upper())
         targetdex = re.findall(target_seq, self.peak_id)
         if not targetdex:
             raise ValueError('target_seq not found!')
@@ -52,6 +54,55 @@ class Trace:
             else:
                 warn('Ambiguous sequence given!')
         return self.peak_id.find(target_seq)
+
+    def find_peak_after(self, target_seq, strict=True):
+        '''
+        Same as find_peak, but give the index of the base after the given sequence.
+        :param target_seq: a string of bases.
+        :param strict: boolean, dies if multiple hits.
+        :return: the index of peak_id or peak_index of the next (last+1) base along
+        '''
+        target_seq = re.sub('[^ATGC]', '', target_seq.upper())
+        return self.find_peak(target_seq, strict)+len(target_seq)+1
+
+    def get_intensities(self, index,wobble=0.20):
+        '''
+        Get intensities at given peak index.
+        :param index: a peak index
+        :param wobble: window to look in (default .2)
+        :return: dictionary
+        '''
+        span = round(len(self.A)/len(self.peak_index))
+        doubleindex=self.peak_index[index]
+        return {base: max([getattr(self,base)[doubleindex+i] for i in range(-round(span*wobble), round(span*wobble))]) for base in self.bases}
+
+    def QQC(self,location, *args, **kwargs):
+        if isinstance(location, str):
+            location = self.find_peak_after(location)
+            ## go..
+        QQC([self.get_intensities(location)],*args, **kwargs)
+
+
+class QQC:
+    def __init__(self,trace,location, scheme='NNK'):
+        pass
+
+    @staticmethod
+    def from_trace(trace, location, *args, **kwargs):
+        '''
+        An alternate route. QQC instance comes from Trace(...).QQC()
+        :param trace: Trace instance
+        :param location: location of first peak of three
+        :return: QQC instance
+        '''
+        if not isinstance(trace, Trace):
+            trace = Trace(trace)
+        return trace.QQC(location, *args, **kwargs)
+
+
+
+
+
 
 
 
@@ -63,7 +114,8 @@ if __name__ == "__main__":
 
     file = "example data/ACE-AA-088-01-55Â°C-BM3-A82_19C-T7-T7minus1.ab1"
     x = Trace.from_filename(file)
-    print(x.find_peak('CGT GAT TTT'))
+    print(x.peak_index)
+    print(x.get_intensities(x.find_peak_after('CGT GAT TTT')))
     # To Do...
     # get base frequency at given peak
     # QQC class
