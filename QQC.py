@@ -83,10 +83,43 @@ class Trace:
         QQC([self.get_intensities(location),self.get_intensities(location+1),self.get_intensities(location+2)],*args, **kwargs)
 
 
+### Considering...
+class CodonProbs:
+    bases = ('A', 'T', 'G', 'C')
+    def __init__(self,codon):
+        self._data=codon
+
+    @classmethod
+    def from_zeros(cls):
+        return cls([{b:0 for b in cls.bases} for i in range(3)])
+
+    def __iter__(self):
+        for i in range(3):
+            for b in self.bases:
+                yield self._data[i][b]
+
+    def __add__(self, other):
+        return CodonProbs([{b: self._data[i][b] + other for b in self.bases} for i in range(3)])
+
+    def __abs__(self):
+        return CodonProbs([{b: abs(self._data[i][b]) for b in self.bases} for i in range(3)])
+
+
+    def clone(self):
+        return CodonProbs(self._data)
+
+    def bsxfun(self, fun):
+        new=CodonProbs.from_zeros()
+        for i in range(3):
+            for b in self.bases:
+                new._data[i][b]=fun(self._data[i][b])
+        return new
+#### end...
+
 class QQC:
     def __init__(self,peak_int,scheme='NNK'):
         #make peakfreqs a fraction of one
-        scheme_pred=[{b:.25 for b in 'ATGC'},{b:.25 for b in 'ATGC'},{'A':0,'T':.50, 'G':.50,'C':0}]
+        scheme_pred=CodonProbs([{b:.25 for b in 'ATGC'},{b:.25 for b in 'ATGC'},{'A':0,'T':.50, 'G':.50,'C':0}])
         codon_peak_freq=[{b:p[b]/sum(p.values()) for b in 'ATGC'} for p in peak_int]
         codon_dev_pf=[sum([scheme_pred[i][b] - abs(scheme_pred[i][b] - codon_peak_freq[i][b]) for b in 'ATGC']) for i in range(3)]
         '''
