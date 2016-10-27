@@ -84,6 +84,7 @@ class Trace:
 
 
 ### Considering...
+# I thought this would be the best way, but it is overkill.
 class CodonProbs:
     bases = ('A', 'T', 'G', 'C')
     def __init__(self,codon):
@@ -118,19 +119,19 @@ class CodonProbs:
 
 class QQC:
     def __init__(self,peak_int,scheme='NNK'):
-        #make peakfreqs a fraction of one
-        scheme_pred=CodonProbs([{b:.25 for b in 'ATGC'},{b:.25 for b in 'ATGC'},{'A':0,'T':.50, 'G':.50,'C':0}])
+        self.scheme = scheme
+        scheme_pred=[{b:.25 for b in 'ATGC'},{b:.25 for b in 'ATGC'},{'A':0,'T':.50, 'G':.50,'C':0}]
+        # make peakfreqs a fraction of one
         codon_peak_freq=[{b:p[b]/sum(p.values()) for b in 'ATGC'} for p in peak_int]
-        codon_dev_pf=[sum([scheme_pred[i][b] - abs(scheme_pred[i][b] - codon_peak_freq[i][b]) for b in 'ATGC']) for i in range(3)]
-        '''
-weights=sum(scheme_pred>0,2)./sum(scheme_pred(:)>0);
-wsum=sum(deviation.*weights);
-worse=sum(scheme_pred-abs(scheme_pred-[ones(3,1), zeros(3,3)]),2);
-wmin=sum(worse.*weights);
-Qpool=(wsum+abs(wmin))/(1+abs(wmin));
-'''
-
-
+        # calculate deviation per position
+        deviation=[sum([scheme_pred[i][b] - abs(scheme_pred[i][b] - codon_peak_freq[i][b]) for b in 'ATGC']) for i in range(3)]
+        weight_total=sum([scheme_pred[i][b]>0 for b in 'ATGC' for i in range(3)])
+        weights = [sum([scheme_pred[i][b]>0 for b in 'ATGC'])/weight_total for i in range(3)]
+        wsum=sum([deviation[i] * weights[i] for i in range(3)])
+        undiverse=[{'A':1,'T':0, 'G':0,'C':0},{'A':1,'T':0, 'G':0,'C':0},{'A':1,'T':0, 'G':0,'C':0}]
+        worse = [sum([scheme_pred[i][b] - abs(scheme_pred[i][b] - undiverse[i][b]) for b in 'ATGC']) for i in range(3)]
+        wmin=sum([worse[i] * weights[i] for i in range(3)])
+        self.Qpool=(wsum+abs(wmin))/(1+abs(wmin))
 
     @staticmethod
     def from_trace(trace, location, *args, **kwargs):
@@ -143,6 +144,8 @@ Qpool=(wsum+abs(wmin))/(1+abs(wmin));
         if not isinstance(trace, Trace):
             trace = Trace(trace)
         return trace.QQC(location, *args, **kwargs)
+
+
 
 
 
