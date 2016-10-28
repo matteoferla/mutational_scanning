@@ -171,6 +171,21 @@ class QQC:
         :param scheme: str of codon proportion.
         :return: a probability list-dictionary thinggy
         """
+        # check first if reserved word.
+        scheme=scheme.upper().replace('-trick'.upper(),'')
+        if scheme == 'Tang'.upper():
+            scheme='12NDT 6VHA 1TGG 1ATG'
+        elif scheme.lower() == '19c':
+            scheme =''
+        elif scheme.lower() == '20c':
+            scheme =''
+        elif scheme.lower() == '21c':
+            scheme =''
+        elif scheme.lower() == '22c':
+            scheme ='1NDT 9VHG 1TGG'
+        else:
+            pass #there seems no need to store a boolean?
+
         degeneracy = {'N': 'ATGC',
                       'A': 'A',
                       'T': 'T',
@@ -195,7 +210,7 @@ class QQC:
                 proportions.append(int(prop))
             else:
                 proportions.append(1)
-            codons.append(codon.upper())
+            codons.append(codon)
         freq = [p / sum(proportions) for p in proportions]
         codonmix = []
         for codon in codons:
