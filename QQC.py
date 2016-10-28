@@ -13,9 +13,15 @@ T = "\t"
 # N = "<br/>
 import re
 from warnings import warn
+from Bio import SeqIO
+from collections import defaultdict
 
 
 class Trace:
+    """
+    A class designed to better handle sequence traces as the documentation is shocking for the SeqIO/AbiIO.
+    http://biopython.org/DIST/docs/api/Bio.SeqIO.AbiIO-module.html
+    """
     bases = ('A', 'T', 'G', 'C')
 
     def __init__(self, record):
@@ -75,10 +81,19 @@ class Trace:
         span = round(len(self.A) / len(self.peak_index))
         doubleindex = self.peak_index[index]
         return {
-        base: max([getattr(self, base)[doubleindex + i] for i in range(-round(span * wobble), round(span * wobble))])
-        for base in self.bases}
+            base: max(
+                [getattr(self, base)[doubleindex + i] for i in range(-round(span * wobble), round(span * wobble))])
+            for base in self.bases}
 
     def QQC(self, location, *args, **kwargs):
+        """
+        Intended main entry point to the QQC class.
+        :param location: peak number. Note that this is not residue or base number as there is no way of telling
+        what is the right frame and start position. Accepts a string of bases preceeding (add NNK or whatever as scheme not at end.)
+        :param args: stuff to pass to QQC(). E.g. scheme='NNK'
+        :param kwargs: stuff to pass to QQC()
+        :return: a QQC object.
+        """
         if isinstance(location, str):
             location = self.find_peak_after(location)
             ## go..
@@ -88,7 +103,7 @@ class Trace:
 
 
 ### Considering...
-# I thought this would be the best way, but it is overkill.
+# I thought this would be the best way, but it is overkill and I have not used it as in it is overkill
 class CodonProbs:
     bases = ('A', 'T', 'G', 'C')
 
@@ -124,7 +139,22 @@ class CodonProbs:
 #### end...
 
 class QQC:
+    """
+    The key format of this class is a list of 3 positions each with a dictionary of the probability of each base. This may be made better in the future.
+    """
+
     def __init__(self, peak_int, scheme='NNK'):
+        def codon_to_AA(codonball):
+            codprob = [codonball[0][x] * codonball[0][y] * codonball[0][z] for x in 'ATGC' for y in 'ATGC' for z in
+                       'ATGC']
+            codnames = [x + y + z for x in 'ATGC' for y in 'ATGC' for z in 'ATGC']
+            # translate codnames to AA.
+            AAprob = defaultdict(int)
+            for i in range(64):
+                AAprob[SOMEMAGICALFUN(codnames[i])] += codprob[i]
+            return AAprob
+
+        self.peak_int = peak_int
         self.scheme = scheme
         self.scheme_mix = QQC.scheme_maker(scheme)
         self.scheme_pred = [
@@ -148,6 +178,18 @@ class QQC:
         wmin = sum([worse[i] * weights[i] for i in range(3)])
         # calculate Qpool
         self.Qpool = (wsum + abs(wmin)) / (1 + abs(wmin))
+        # calculate AA...
+        schemeprobball = []
+        for primer in self.scheme_mix:
+            schemeprobball.append(codon_to_AA(primer))
+        predAAprob={aa: sum([primer[0]*primer[1][aa] for primer in schemeprobball]) for aa in schemeprobball[0][1].keys()}
+        if len(self.scheme_mix) ==1: #i.e. the easy case...
+            # triadic product (horizontal vector x vertical vector x stacked vector
+            # codprob = bsxfun( @ mtimes, codon(1,:)'*codon(2,:), reshape(codon(3,:),1,1,4));
+            empAAprob = codon_to_AA(codon_peak_freq)
+        else: #deconvolute!
+            pass
+
 
     @staticmethod
     def from_trace(trace, location, *args, **kwargs):
@@ -169,23 +211,24 @@ class QQC:
         So it accepts one or more codons separated by a space and optionally prefixed with a interger number.
         >>> QQC.scheme_maker('12NDT 6VHA 1TGG 1ATG')
         :param scheme: str of codon proportion.
-        :return: a probability list-dictionary thinggy
+        :return: a LIST of n primers each being a list of 3 positions each with a dictionary of the probability of each base.
         """
         # check first if reserved word.
-        scheme=scheme.upper().replace('-trick'.upper(),'')
+        scheme = scheme.upper().replace('-trick'.upper(), '')
         if scheme == 'Tang'.upper():
-            scheme='12NDT 6VHA 1TGG 1ATG'
+            scheme = '12NDT 6VHA 1TGG 1ATG'
         elif scheme.lower() == '19c':
-            scheme =''
+            scheme = ''
         elif scheme.lower() == '20c':
-            scheme =''
+            scheme = ''
         elif scheme.lower() == '21c':
-            scheme =''
+            scheme = ''
         elif scheme.lower() == '22c':
-            scheme ='1NDT 9VHG 1TGG'
+            # dx.doi.org / 10.1038 / srep10654
+            scheme = '1NDT 9VHG 1TGG'
         else:
-            pass #there seems no need to store a boolean?
-
+            pass  # there seems no need to store a boolean?
+        # Biopython can handle this somewhere but tyhis is easier.
         degeneracy = {'N': 'ATGC',
                       'A': 'A',
                       'T': 'T',
@@ -201,6 +244,7 @@ class QQC:
                       'V': 'AGC',
                       'H': 'ATC',
                       'D': 'ATG'}
+        # split for analysis
         schemelist = scheme.split()
         proportions = []
         codons = []
@@ -211,6 +255,7 @@ class QQC:
             else:
                 proportions.append(1)
             codons.append(codon)
+        # pars
         freq = [p / sum(proportions) for p in proportions]
         codonmix = []
         for codon in codons:
@@ -228,11 +273,6 @@ class QQC:
 
 
 if __name__ == "__main__":
-    # the documentation is shocking
-    # http://biopython.org/DIST/docs/api/Bio.SeqIO.AbiIO-module.html
-    from Bio import SeqIO
-    import json
-
     file = "example data/ACE-AA-088-01-55Â°C-BM3-A82_19C-T7-T7minus1.ab1"
     x = Trace.from_filename(file)
     print(x.QQC('CGT GAT TTT', '12NDT 6VHA 1TGG 1ATG'))
