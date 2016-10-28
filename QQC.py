@@ -14,6 +14,7 @@ T = "\t"
 import re
 from warnings import warn
 from Bio import SeqIO
+from Bio.Seq import Seq
 from collections import defaultdict
 
 
@@ -145,13 +146,13 @@ class QQC:
 
     def __init__(self, peak_int, scheme='NNK'):
         def codon_to_AA(codonball):
-            codprob = [codonball[0][x] * codonball[0][y] * codonball[0][z] for x in 'ATGC' for y in 'ATGC' for z in
-                       'ATGC']
+            codprob = [codonball[0][x] * codonball[1][y] * codonball[2][z]
+                       for x in 'ATGC' for y in 'ATGC' for z in 'ATGC']
             codnames = [x + y + z for x in 'ATGC' for y in 'ATGC' for z in 'ATGC']
             # translate codnames to AA.
             AAprob = defaultdict(int)
             for i in range(64):
-                AAprob[SOMEMAGICALFUN(codnames[i])] += codprob[i]
+                AAprob[str(Seq(codnames[i]).translate())] += codprob[i]
             return AAprob
 
         self.peak_int = peak_int
@@ -181,14 +182,15 @@ class QQC:
         # calculate AA...
         schemeprobball = []
         for primer in self.scheme_mix:
-            schemeprobball.append(codon_to_AA(primer))
-        predAAprob={aa: sum([primer[0]*primer[1][aa] for primer in schemeprobball]) for aa in schemeprobball[0][1].keys()}
+            schemeprobball.append(codon_to_AA(primer[1]))
+        self.predAAprob={aa: sum([self.scheme_mix[pi][0]*schemeprobball[pi][aa] for pi in range(len(schemeprobball))]) for aa in schemeprobball[0].keys()}
         if len(self.scheme_mix) ==1: #i.e. the easy case...
             # triadic product (horizontal vector x vertical vector x stacked vector
             # codprob = bsxfun( @ mtimes, codon(1,:)'*codon(2,:), reshape(codon(3,:),1,1,4));
-            empAAprob = codon_to_AA(codon_peak_freq)
+            self.empAAprob = codon_to_AA(codon_peak_freq)
         else: #deconvolute!
-            pass
+            raise NotImplementedError
+            self.empAAprob = 'end is nigh'
 
 
     @staticmethod
