@@ -16,6 +16,8 @@ from warnings import warn
 from Bio import SeqIO
 from Bio.Seq import Seq
 from collections import defaultdict
+import numpy as np
+from scipy.optimize import minimize
 
 
 class Trace:
@@ -144,6 +146,12 @@ class QQC:
     The key format of this class is a list of 3 positions each with a dictionary of the probability of each base. This may be made better in the future.
     """
 
+    def _targetfun(self, offness):
+        return sum([abs(sum([abs(
+            offness.reshape(len(self.scheme_mix), 3, 4)[p, i, bi] * self.scheme_mix[p][0] * self.scheme_mix[p][1][i][
+                'ATGC'[bi]]) for p in range(len(self.scheme_mix))]) - self.codon_peak_freq[i]['ATGC'[bi]]) for i in
+                    range(3) for bi in range(4)])
+
     def __init__(self, peak_int, scheme='NNK'):
         def codon_to_AA(codonball):
             codprob = [codonball[0][x] * codonball[1][y] * codonball[2][z]
@@ -162,10 +170,11 @@ class QQC:
             {b: sum([self.scheme_mix[p][0] * self.scheme_mix[p][1][i][b] for p in range(len(self.scheme_mix))]) for b in
              'ATGC'} for i in range(3)]
         # make peakfreqs a fraction of one
-        codon_peak_freq = [{b: p[b] / sum(p.values()) for b in 'ATGC'} for p in peak_int]
+        self.codon_peak_freq = [{b: p[b] / sum(p.values()) for b in 'ATGC'} for p in peak_int]
         # calculate deviation per position
-        deviation = [sum([self.scheme_pred[i][b] - abs(self.scheme_pred[i][b] - codon_peak_freq[i][b]) for b in 'ATGC'])
-                     for i in range(3)]
+        deviation = [
+            sum([self.scheme_pred[i][b] - abs(self.scheme_pred[i][b] - self.codon_peak_freq[i][b]) for b in 'ATGC'])
+            for i in range(3)]
         # calculate the weights
         weight_total = sum([self.scheme_pred[i][b] > 0 for b in 'ATGC' for i in range(3)])
         weights = [sum([self.scheme_pred[i][b] > 0 for b in 'ATGC']) / weight_total for i in range(3)]
@@ -183,15 +192,28 @@ class QQC:
         schemeprobball = []
         for primer in self.scheme_mix:
             schemeprobball.append(codon_to_AA(primer[1]))
-        self.predAAprob={aa: sum([self.scheme_mix[pi][0]*schemeprobball[pi][aa] for pi in range(len(schemeprobball))]) for aa in schemeprobball[0].keys()}
-        if len(self.scheme_mix) ==1: #i.e. the easy case...
+        self.predAAprob = {
+        aa: sum([self.scheme_mix[pi][0] * schemeprobball[pi][aa] for pi in range(len(schemeprobball))]) for aa in
+        schemeprobball[0].keys()}
+        if len(self.scheme_mix) == 1:  # i.e. the easy case...
             # triadic product (horizontal vector x vertical vector x stacked vector
             # codprob = bsxfun( @ mtimes, codon(1,:)'*codon(2,:), reshape(codon(3,:),1,1,4));
-            self.empAAprob = codon_to_AA(codon_peak_freq)
-        else: #deconvolute!
-            raise NotImplementedError
-            self.empAAprob = 'end is nigh'
-
+            self.codon_peak_freq_split = [self.codon_peak_freq]
+            self.empAAprob = codon_to_AA(self.codon_peak_freq)
+        else:  # deconvolute!
+            # matlab code
+            offness_zero = np.array([[[0.25 for b in 'ATGC'] for i in range(3)] for p in
+                                     range(len(self.scheme_mix))])  # ones(3,4,numel(ppro))
+            res = minimize(self._targetfun, offness_zero)
+            self.codon_peak_freq_split = [
+                [{'ATGC'[bi]: abs(res.x.reshape(len(self.scheme_mix), 3, 4)[p, i, bi]) for bi in range(4)} for i in range(3)]
+                for p in range(len(self.scheme_mix))]
+            codonprobball = []
+            for primer in self.codon_peak_freq_split:
+                codonprobball.append(codon_to_AA(primer))
+            self.empAAprob = {
+                aa: sum([self.scheme_mix[pi][0] * codonprobball[pi][aa] for pi in range(len(codonprobball))]) for aa in
+                codonprobball[0].keys()}
 
     @staticmethod
     def from_trace(trace, location, *args, **kwargs):
@@ -277,7 +299,7 @@ class QQC:
 if __name__ == "__main__":
     file = "example data/ACE-AA-088-01-55Â°C-BM3-A82_19C-T7-T7minus1.ab1"
     x = Trace.from_filename(file)
-    print(x.QQC('CGT GAT TTT', '12NDT 6VHA 1TGG 1ATG'))
+    print(x.QQC('CGT GAT TTT', '12NDT 6VHA 1TGG 1ATG').empAAprob)
     # To Do...
     # calculate AA
     # give presents words like Tang and 22c
