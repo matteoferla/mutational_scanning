@@ -143,7 +143,13 @@ class CodonProbs:
 
 class QQC:
     """
-    The key format of this class is a list of 3 positions each with a dictionary of the probability of each base. This may be made better in the future.
+    This class is meant to be called via:
+    >>> Trace(seqRecord).QQC(str_of_preceding_bases, str_of_scheme)
+    But can be called directly...
+    The normal initialisation relies on as an input a special construct that is the key format of this class and is a list of 3 positions each with a dictionary of the probability of each base. This may be made better in the future.
+    There is also a reverse
+    >>> QQC.from_trace(filename,str_of_preceding_bases, str_of_scheme)
+    The default scheme is NNK, but complex inputs are possible: see `QQC.scheme_maker()`
     """
 
     def _targetfun(self, offness):
@@ -153,6 +159,16 @@ class QQC:
                     range(3) for bi in range(4)])
 
     def __init__(self, peak_int, scheme='NNK'):
+        """
+        The QQC object has various attributes:
+        * scheme: str of scheme name
+        * scheme_mix: a list of size 2 tuple with a first value the fraction that the primer accounts for and the second a size 3 list of ('A','T','G','C')-keyed dicts
+        * Qpool: float of the calculated Qpool
+        * codon_peak_freq: a size 3 list of ('A','T','G','C')-keyed dicts of the empirical values
+        * codon_peak_freq_split: the deconvoluted version (a list of size 3 lists of ('A','T','G','C')-keyed dicts, unlike sheme_mix the outer list does not have a size 2 tuple as the proportion is for the scheme_mix)
+        * scheme_AA_probabilities: AminoAcid-keyed dict of predicted pobabilities
+        * empirical_AA_probabilities: AminoAcid-keyed dict of empirical pobabilities
+        """
         def codon_to_AA(codonball):
             codprob = [codonball[0][x] * codonball[1][y] * codonball[2][z]
                        for x in 'ATGC' for y in 'ATGC' for z in 'ATGC']
@@ -192,14 +208,14 @@ class QQC:
         schemeprobball = []
         for primer in self.scheme_mix:
             schemeprobball.append(codon_to_AA(primer[1]))
-        self.predAAprob = {
+        self.scheme_AA_probabilities = {
         aa: sum([self.scheme_mix[pi][0] * schemeprobball[pi][aa] for pi in range(len(schemeprobball))]) for aa in
         schemeprobball[0].keys()}
         if len(self.scheme_mix) == 1:  # i.e. the easy case...
             # triadic product (horizontal vector x vertical vector x stacked vector
             # codprob = bsxfun( @ mtimes, codon(1,:)'*codon(2,:), reshape(codon(3,:),1,1,4));
             self.codon_peak_freq_split = [self.codon_peak_freq]
-            self.empAAprob = codon_to_AA(self.codon_peak_freq)
+            self.empirical_AA_probabilities = codon_to_AA(self.codon_peak_freq)
         else:  # deconvolute!
             # matlab code
             offness_zero = np.array([[[0.25 for b in 'ATGC'] for i in range(3)] for p in
@@ -211,7 +227,7 @@ class QQC:
             codonprobball = []
             for primer in self.codon_peak_freq_split:
                 codonprobball.append(codon_to_AA(primer))
-            self.empAAprob = {
+            self.empirical_AA_probabilities = {
                 aa: sum([self.scheme_mix[pi][0] * codonprobball[pi][aa] for pi in range(len(codonprobball))]) for aa in
                 codonprobball[0].keys()}
 
@@ -299,7 +315,7 @@ class QQC:
 if __name__ == "__main__":
     file = "example data/ACE-AA-088-01-55Â°C-BM3-A82_19C-T7-T7minus1.ab1"
     x = Trace.from_filename(file)
-    print(x.QQC('CGT GAT TTT', '12NDT 6VHA 1TGG 1ATG').empAAprob)
+    print(x.QQC('CGT GAT TTT', '12NDT 6VHA 1TGG 1ATG').empirical_AA_probabilities)
     # To Do...
     # calculate AA
     # give presents words like Tang and 22c
