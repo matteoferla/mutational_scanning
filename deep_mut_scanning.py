@@ -150,7 +150,7 @@ def test():
     w = csv.DictWriter(open('out.csv', 'w', newline=''),
                        fieldnames='base AA codon fw_primer rv_primer len_homology fw_len_anneal rv_len_anneal fw_len_primer rv_len_primer homology_start homology_stop homology_Tm fw_anneal_Tm rv_anneal_Tm'.split())
     w.writeheader()
-    w.writerows(deep_mutation_scan(query, (n, n + m), staggered=False))
+    w.writerows(deep_mutation_scan(query, (n, n + m)))
 
 
 def cmdline():
@@ -167,5 +167,5 @@ def cmdline():
 
 
 if __name__ == "__main__":
-    # cmdline()
-    test()
+    cmdline()
+    #test()
