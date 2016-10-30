@@ -255,11 +255,9 @@ class QQC:
         """
         # check first if reserved word.
         scheme = scheme.upper().replace('-trick'.upper(), '')
-        if scheme == 'Tang'.upper():
+        if scheme == 'Tang'.upper() or scheme.lower() == '20c':
             scheme = '12NDT 6VHA 1TGG 1ATG'
         elif scheme.lower() == '19c':
-            scheme = ''
-        elif scheme.lower() == '20c':
             scheme = ''
         elif scheme.lower() == '21c':
             scheme = ''
@@ -316,6 +314,3 @@ if __name__ == "__main__":
     file = "example data/ACE-AA-088-01-55Â°C-BM3-A82_19C-T7-T7minus1.ab1"
     x = Trace.from_filename(file)
     print(x.QQC('CGT GAT TTT', '12NDT 6VHA 1TGG 1ATG').empirical_AA_probabilities)
-    # To Do...
-    # calculate AA
-    # give presents words like Tang and 22c
