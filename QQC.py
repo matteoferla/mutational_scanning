@@ -72,7 +72,7 @@ class Trace:
         :return: the index of peak_id or peak_index of the next (last+1) base along
         """
         target_seq = re.sub('[^ATGC]', '', target_seq.upper())
-        return self.find_peak(target_seq, strict) + len(target_seq) + 1
+        return self.find_peak(target_seq, strict) + len(target_seq)
 
     def get_intensities(self, index, wobble=0.20):
         """
@@ -103,43 +103,6 @@ class Trace:
         return QQC(
             [self.get_intensities(location), self.get_intensities(location + 1), self.get_intensities(location + 2)],
             *args, **kwargs)
-
-
-### Considering...
-# I thought this would be the best way, but it is overkill and I have not used it as in it is overkill
-class CodonProbs:
-    bases = ('A', 'T', 'G', 'C')
-
-    def __init__(self, codon):
-        self._data = codon
-
-    @classmethod
-    def from_zeros(cls):
-        return cls([{b: 0 for b in cls.bases} for i in range(3)])
-
-    def __iter__(self):
-        for i in range(3):
-            for b in self.bases:
-                yield self._data[i][b]
-
-    def __add__(self, other):
-        return CodonProbs([{b: self._data[i][b] + other for b in self.bases} for i in range(3)])
-
-    def __abs__(self):
-        return CodonProbs([{b: abs(self._data[i][b]) for b in self.bases} for i in range(3)])
-
-    def clone(self):
-        return CodonProbs(self._data)
-
-    def bsxfun(self, fun):
-        new = CodonProbs.from_zeros()
-        for i in range(3):
-            for b in self.bases:
-                new._data[i][b] = fun(self._data[i][b])
-        return new
-
-
-#### end...
 
 class QQC:
     """
@@ -328,3 +291,4 @@ if __name__ == "__main__":
     print(sum(q.empirical_AA_probabilities.values()))
     print(sum([p[i][b] for p in q.codon_peak_freq_split for i in range(3) for b in 'ATGC']) / (
         3 * len(q.codon_peak_freq_split)))
+    print(q.empirical_AA_probabilities.keys())
