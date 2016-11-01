@@ -153,9 +153,15 @@ class QQC:
     """
 
     def _targetfun(self, offness):
+        """I cannae shove this in __init__ as it needs a few variables from self.
+        There is a weirdness in that the vector gets linearised.
+        objfunc = @(offness) sum(abs(reshape(abs(offness(:,:,1) .* ppro(1) .* con(:,:,1)) + abs(offness(:,:,2) .* ppro(2) .* con(:,:,2)) + abs(offness(:,:,3) .* ppro(3) .* con(:,:,3)) - codon, 12,1)));
+        """
+        off = offness.reshape(len(self.scheme_mix), 3, 4)
         return sum([abs(sum([abs(
-            offness.reshape(len(self.scheme_mix), 3, 4)[p, i, bi] * self.scheme_mix[p][0] * self.scheme_mix[p][1][i][
-                'ATGC'[bi]]) for p in range(len(self.scheme_mix))]) - self.codon_peak_freq[i]['ATGC'[bi]]) for i in
+            off[p, i, bi] * self.scheme_mix[p][0] *
+            self.scheme_mix[p][1][i]['ATGC'[bi]])
+                             for p in range(len(self.scheme_mix))]) - self.codon_peak_freq[i]['ATGC'[bi]]) for i in
                     range(3) for bi in range(4)])
 
     def __init__(self, peak_int, scheme='NNK'):
@@ -169,6 +175,7 @@ class QQC:
         * scheme_AA_probabilities: AminoAcid-keyed dict of predicted pobabilities
         * empirical_AA_probabilities: AminoAcid-keyed dict of empirical pobabilities
         """
+
         def codon_to_AA(codonball):
             codprob = [codonball[0][x] * codonball[1][y] * codonball[2][z]
                        for x in 'ATGC' for y in 'ATGC' for z in 'ATGC']
@@ -209,8 +216,8 @@ class QQC:
         for primer in self.scheme_mix:
             schemeprobball.append(codon_to_AA(primer[1]))
         self.scheme_AA_probabilities = {
-        aa: sum([self.scheme_mix[pi][0] * schemeprobball[pi][aa] for pi in range(len(schemeprobball))]) for aa in
-        schemeprobball[0].keys()}
+            aa: sum([self.scheme_mix[pi][0] * schemeprobball[pi][aa] for pi in range(len(schemeprobball))]) for aa in
+            schemeprobball[0].keys()}
         if len(self.scheme_mix) == 1:  # i.e. the easy case...
             # triadic product (horizontal vector x vertical vector x stacked vector
             # codprob = bsxfun( @ mtimes, codon(1,:)'*codon(2,:), reshape(codon(3,:),1,1,4));
@@ -221,8 +228,10 @@ class QQC:
             offness_zero = np.array([[[0.25 for b in 'ATGC'] for i in range(3)] for p in
                                      range(len(self.scheme_mix))])  # ones(3,4,numel(ppro))
             res = minimize(self._targetfun, offness_zero)
+            r=res.x.reshape(len(self.scheme_mix), 3, 4)
             self.codon_peak_freq_split = [
-                [{'ATGC'[bi]: abs(res.x.reshape(len(self.scheme_mix), 3, 4)[p, i, bi]) for bi in range(4)} for i in range(3)]
+                [{'ATGC'[bi]: abs(r[p, i, bi] * self.scheme_mix[p][1][i]['ATGC'[bi]]) for bi in range(4)} for i in
+                 range(3)]
                 for p in range(len(self.scheme_mix))]
             codonprobball = []
             for primer in self.codon_peak_freq_split:
@@ -314,4 +323,8 @@ if __name__ == "__main__":
     file = "example data/ACE-AA-088-01-55Â°C-BM3-A82_19C-T7-T7minus1.ab1"
     x = Trace.from_filename(file)
     print('There is a bug')
-    print(sum(x.QQC('CGT GAT TTT', '12NDT 6VHA 1TGG 1ATG').empirical_AA_probabilities.values()))
+    q = x.QQC('CGT GAT TTT', '12NDT 6VHA 1TGG 1ATG')
+    # q = x.QQC('CGT GAT TTT', 'NNK') # works
+    print(sum(q.empirical_AA_probabilities.values()))
+    print(sum([p[i][b] for p in q.codon_peak_freq_split for i in range(3) for b in 'ATGC']) / (
+        3 * len(q.codon_peak_freq_split)))
