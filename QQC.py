@@ -313,4 +313,5 @@ class QQC:
 if __name__ == "__main__":
     file = "example data/ACE-AA-088-01-55Â°C-BM3-A82_19C-T7-T7minus1.ab1"
     x = Trace.from_filename(file)
-    print(x.QQC('CGT GAT TTT', '12NDT 6VHA 1TGG 1ATG').empirical_AA_probabilities)
+    print('There is a bug')
+    print(sum(x.QQC('CGT GAT TTT', '12NDT 6VHA 1TGG 1ATG').empirical_AA_probabilities.values()))
