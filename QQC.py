@@ -127,7 +127,7 @@ class QQC:
                              for p in range(len(self.scheme_mix))]) - self.codon_peak_freq[i]['ATGC'[bi]]) for i in
                     range(3) for bi in range(4)])
 
-    def __init__(self, peak_int, scheme='NNK'):
+    def __init__(self, peak_int, scheme='NNK', normalise_hack=False):
         """
         The QQC object has various attributes:
         * scheme: str of scheme name
@@ -187,15 +187,18 @@ class QQC:
             self.codon_peak_freq_split = [self.codon_peak_freq]
             self.empirical_AA_probabilities = codon_to_AA(self.codon_peak_freq)
         else:  # deconvolute!
-            # matlab code
+            prinumb=len(self.scheme_mix)
             offness_zero = np.array([[[0.25 for b in 'ATGC'] for i in range(3)] for p in
-                                     range(len(self.scheme_mix))])  # ones(3,4,numel(ppro))
+                                     range(prinumb)])  # ones(3,4,numel(ppro))
             res = minimize(self._targetfun, offness_zero)
-            r=res.x.reshape(len(self.scheme_mix), 3, 4)
+            r=res.x.reshape(prinumb, 3, 4)
             self.codon_peak_freq_split = [
                 [{'ATGC'[bi]: abs(r[p, i, bi] * self.scheme_mix[p][1][i]['ATGC'[bi]]) for bi in range(4)} for i in
                  range(3)]
-                for p in range(len(self.scheme_mix))]
+                for p in range(prinumb)]
+            if normalise_hack:
+                s=sum([self.codon_peak_freq_split[p][i][b] for b in 'ATGC' for i in range(3) for p in range(len(self.scheme_mix))])/(3*prinumb)
+                self.codon_peak_freq_split =[[{b: self.codon_peak_freq_split[p][i][b]/s for b in 'ATGC'} for i in range(3)] for p in range(prinumb)]
             codonprobball = []
             for primer in self.codon_peak_freq_split:
                 codonprobball.append(codon_to_AA(primer))
@@ -233,7 +236,7 @@ class QQC:
             scheme = ''
         elif scheme.lower() == '21c':
             scheme = ''
-        elif scheme.lower() == '22c':
+        elif scheme == 'Kille'.upper() or scheme.lower() == '22c':
             # dx.doi.org / 10.1038 / srep10654
             scheme = '1NDT 9VHG 1TGG'
         else:
@@ -283,12 +286,11 @@ class QQC:
 
 
 if __name__ == "__main__":
-    file = "example data/ACE-AA-088-01-55Â°C-BM3-A82_19C-T7-T7minus1.ab1"
+    file = "example data/ACE-AA-088-02-60Â°C-BM3-A82_NDT-VHG-TGG-T7Hi-T7minus1.ab1"
     x = Trace.from_filename(file)
-    print('There is a bug')
-    q = x.QQC('CGT GAT TTT', '12NDT 6VHA 1TGG 1ATG')
+    q = x.QQC('CGT GAT TTT', '22c')
     # q = x.QQC('CGT GAT TTT', 'NNK') # works
-    print(sum(q.empirical_AA_probabilities.values()))
-    print(sum([p[i][b] for p in q.codon_peak_freq_split for i in range(3) for b in 'ATGC']) / (
+    print('Bases ',sum([p[i][b] for p in q.codon_peak_freq_split for i in range(3) for b in 'ATGC']) / (
         3 * len(q.codon_peak_freq_split)))
-    print(q.empirical_AA_probabilities.keys())
+
+    print('AA ',sum(q.empirical_AA_probabilities.values()))
