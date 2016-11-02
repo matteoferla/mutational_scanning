@@ -55,9 +55,6 @@ hold on
 plot(abscissa(ai), f1,'-r')
 % the data is too noisy...
 
-
-
-
 % Proportions
 figure
 pie(sum([Probability.prob_A>0, Probability.prob_T>0, Probability.prob_G>0, Probability.prob_C>0])/1821)
@@ -79,17 +76,17 @@ violin({A,T,G,C})
 %% Distance
 % one thing that seems true is that peak height vs. distance from previous
 % might correlate.
-gap=(numel(Sample.A)/numel(Probability.prob_A));
+span=(numel(Sample.A)/numel(Probability.prob_A));
 figure
 x=Probability.peak_index(Probability.prob_A>0);
-plot((x(2:end)-x(1:end-1))/gap,Sample.A(x(2:end)),'.')
+plot((x(2:end)-x(1:end-1))/span,Sample.A(x(2:end)),'.')
 hold on
 x=Probability.peak_index(Probability.prob_T>0);
-plot((x(2:end)-x(1:end-1))/gap,Sample.T(x(2:end)),'.')
+plot((x(2:end)-x(1:end-1))/span,Sample.T(x(2:end)),'.')
 x=Probability.peak_index(Probability.prob_G>0);
-plot((x(2:end)-x(1:end-1))/gap,Sample.G(x(2:end)),'.')
+plot((x(2:end)-x(1:end-1))/span,Sample.G(x(2:end)),'.')
 x=Probability.peak_index(Probability.prob_C>0);
-plot((x(2:end)-x(1:end-1))/gap,Sample.C(x(2:end)),'.')
+plot((x(2:end)-x(1:end-1))/span,Sample.C(x(2:end)),'.')
 legend({'A','T','G','C'});
 xlabel('Distance from upstream base of same type')
 ylabel('Intensity')
@@ -100,17 +97,32 @@ xlim([0 20])
 % but I know there is a trend with distance too.
 figure
 x=Probability.peak_index(Probability.prob_A>0);
-plot((x(2:end)-x(1:end-1))/gap,Sample.A(x(2:end))./polyval(p,x(2:end)),'.')
+plot((x(2:end)-x(1:end-1))/span,Sample.A(x(2:end))./polyval(p,x(2:end)),'.')
 hold on
 x=Probability.peak_index(Probability.prob_T>0);
-plot((x(2:end)-x(1:end-1))/gap,Sample.T(x(2:end))./polyval(p,x(2:end)),'.')
+plot((x(2:end)-x(1:end-1))/span,Sample.T(x(2:end))./polyval(p,x(2:end)),'.')
 x=Probability.peak_index(Probability.prob_G>0);
-plot((x(2:end)-x(1:end-1))/gap,Sample.G(x(2:end))./polyval(p,x(2:end)),'.')
+plot((x(2:end)-x(1:end-1))/span,Sample.G(x(2:end))./polyval(p,x(2:end)),'.')
 x=Probability.peak_index(Probability.prob_C>0);
-plot((x(2:end)-x(1:end-1))/gap,Sample.C(x(2:end))./polyval(p,x(2:end)),'.')
+plot((x(2:end)-x(1:end-1))/span,Sample.C(x(2:end))./polyval(p,x(2:end)),'.')
 legend({'A','T','G','C'});
 xlabel('Distance from upstream base of same type')
 ylabel('Intensity')
 ylim([0 2])
 xlim([0 20])
 
+
+figure
+x=Probability.peak_index(Probability.prob_A>0);
+scatter(x(2:end),Sample.A(x(2:end)),2*(x(2:end)-x(1:end-1))/span,'filled')
+hold on
+x=Probability.peak_index(Probability.prob_T>0);
+scatter(x(2:end),Sample.T(x(2:end)),2*(x(2:end)-x(1:end-1))/span,'filled')
+x=Probability.peak_index(Probability.prob_G>0);
+scatter(x(2:end),Sample.G(x(2:end)),2*(x(2:end)-x(1:end-1))/span,'filled')
+x=Probability.peak_index(Probability.prob_C>0);
+scatter(x(2:end),Sample.C(x(2:end)),2*(x(2:end)-x(1:end-1))/span,'filled')
+legend({'A','T','G','C'});
+xlabel('Position')
+ylabel('Intensity')
+title('Distance from same type (dot size) does not seem to correlate')
