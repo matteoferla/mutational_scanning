@@ -21,7 +21,7 @@ import random
 
 
 def deep_mutation_scan(region, section, target_temp=55, overlap_len=22, primer_range=(None, 60), mutation='NNK',
-                       GC_bonus=1, Tm_bonus=2.8, staggered=True):
+                       GC_bonus=1, Tm_bonus=2.8, staggered=True, count_from_one=True):
     """
     Designs primers for quikchange for deep mutation scanning.
     Based on the overlap principle of http://nar.oxfordjournals.org/content/43/2/e12.long
@@ -68,13 +68,14 @@ def deep_mutation_scan(region, section, target_temp=55, overlap_len=22, primer_r
         start = x - int(overlap_len / 2)
         stop = x + overlap_len - int(overlap_len / 2)
         codon = {'codon': region[x:x + 3],
-                 'AA': str(region[x:x + 3].translate()) + str(int(x / 3)),
+                 'AA': str(region[x:x + 3].translate()) + str(int((x-(section.start-3)*count_from_one)/3)),
                  'base': x,
                  'homology_start': start,
                  'homology_stop': stop,
                  'len_homology': overlap_len,
                  'homology_Tm': round(mt.Tm_NN(region[start:stop]), 1)
                  }
+        print(codon['AA'])
         # iterate to find best fw primer.
         for dir in ('fw', 'rv'):
             for i in range(primer_range[0] - int(overlap_len / 2) - 3, primer_range[1] - int(overlap_len / 2) - 3):
@@ -167,5 +168,5 @@ def cmdline():
 
 
 if __name__ == "__main__":
-    cmdline()
-    #test()
+    #cmdline()
+    test()
