@@ -36,6 +36,7 @@ def deep_mutation_scan(region, section, target_temp=55, overlap_len=22, primer_r
     :param GC_bonus: 5' GC clamp. This number is added to the Tm when checking if is greater than the set threshold target_temp.
     :param Tm_bonus: Temp increase due to salt. Distilled water (+0). To match the IDT oligoanalyser with 50 mM Na (+2.8&deg;C). Taq buffer (+4.9&deg;C), Phusion buffer (+11.6&deg;C), Q5 buffer (+13.3&deg;C)
     :param staggered: Boolean. If true (default) staggered primers will be designed. If not, Agilent-QC primers with full overlap will be designed.
+    :param count_from_one: Boolean or int. If true (default) the first amino acid mutated will be the first one, else whatever number it was in the sequence.
     :return: a list of dictionaries with the following keys: base codon primer len_homology len_anneal len_primer homology_start homology_stop homology_Tm anneal_Tm
 
     Regarding salts. check out mt.salt_correction at http://biopython.org/DIST/docs/api/Bio.SeqUtils.MeltingTemp-module.html#salt_correction
@@ -64,18 +65,23 @@ def deep_mutation_scan(region, section, target_temp=55, overlap_len=22, primer_r
         primer_range = (overlap_len, primer_range[1])
     # iterate across codons.
     geneball = []
+    if count_from_one is True:
+        offset = int(section.start/3 -1)
+    elif isinstance(count_from_one,int):
+        offset=count_from_one
+    else:
+        offset=0
     for x in range(section.start, section.stop, 3):
         start = x - int(overlap_len / 2)
         stop = x + overlap_len - int(overlap_len / 2)
         codon = {'codon': region[x:x + 3],
-                 'AA': str(region[x:x + 3].translate()) + str(int((x-(section.start-3)*count_from_one)/3)),
+                 'AA': str(region[x:x + 3].translate()) + str(int(x/3)-offset),
                  'base': x,
                  'homology_start': start,
                  'homology_stop': stop,
                  'len_homology': overlap_len,
                  'homology_Tm': round(mt.Tm_NN(region[start:stop]), 1)
                  }
-        print(codon['AA'])
         # iterate to find best fw primer.
         for dir in ('fw', 'rv'):
             for i in range(primer_range[0] - int(overlap_len / 2) - 3, primer_range[1] - int(overlap_len / 2) - 3):
